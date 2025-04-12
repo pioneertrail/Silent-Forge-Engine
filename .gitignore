@@ -1,0 +1,29 @@
+# Build and output directories
+build/
+bin/
+*.o
+*.a
+*.so
+*.dll
+*.exe
+
+# IDE files
+.vscode/
+.idea/
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+lib/*/build/
+
+# Logs
+*.log
+
+# OS-specific files
+.DS_Store
+
+# Keep assets
+!assets/fonts/*.png
+!assets/fonts/*.fnt
+!assets/textures/*.png 
