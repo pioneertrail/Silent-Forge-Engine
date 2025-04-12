@@ -1,27 +1,121 @@
-# Build and output directories
+# Build directories
 build/
 bin/
-*.o
-*.a
-*.so
-*.dll
-*.exe
+out/
+dist/
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+*.ninja
+.ninja_deps
+.ninja_log
 
 # IDE files
 .vscode/
 .idea/
+*.swp
+*.swo
+*.swn
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.ncb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
 
-# CMake files
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-lib/*/build/
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+*.elf
+*.exe
+*.dll
+*.so
+*.dylib
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
 
-# Logs
-*.log
+# Precompiled Headers
+*.gch
+*.pch
 
-# OS-specific files
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+*.db
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Dependency directories
+node_modules/
+jspm_packages/
+bower_components/
+
+# Debug files
+*.pdb
+*.idb
+*.ilk
+*.exp
+*.manifest
+*.res
+*.aps
+*.opt
+*.ncb
+*.plg
+*.clw
+*.aps
+*.ncb
+*.user
+*.aps
+*.pch
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
 # Keep assets
 !assets/fonts/*.png

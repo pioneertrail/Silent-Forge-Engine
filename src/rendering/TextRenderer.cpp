@@ -1,234 +1,280 @@
 #include "rendering/TextRenderer.hpp"
-#include <iostream>
 #include <fstream>
 #include <sstream>
-#define STB_IMAGE_IMPLEMENTATION
+#include <iostream>
+#include <glad/glad.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "stb/stb_image.h"
 
 namespace SFE {
-TextRenderer::TextRenderer() : vao(0), vbo(0), textureID(0), atlasWidth(0), atlasHeight(0), shader("shaders/text.vert", "shaders/text.frag") {}
+
+TextRenderer::TextRenderer() 
+    : vao(0), vbo(0), textureID(0), atlasWidth(0), atlasHeight(0),
+      shader("shaders/text2d.vert", "shaders/text2d.frag") {
+    batchedVertices.reserve(MAX_BATCH_VERTICES);
+}
 
 TextRenderer::~TextRenderer() {
-    glDeleteVertexArrays(1, &vao);
-    glDeleteBuffers(1, &vbo);
+    if (vao != 0) {
+        glDeleteVertexArrays(1, &vao);
+    }
+    if (vbo != 0) {
+        glDeleteBuffers(1, &vbo);
+    }
     if (textureID != 0) {
         glDeleteTextures(1, &textureID);
     }
 }
 
 bool TextRenderer::initialize(const std::string& fontAtlasPath, const std::string& fontDescPath) {
+    // Load font atlas texture
     if (!loadFontAtlas(fontAtlasPath)) {
         std::cerr << "Failed to load font atlas: " << fontAtlasPath << std::endl;
         return false;
     }
+
+    // Load font descriptor file
     if (!loadFontDescriptor(fontDescPath)) {
         std::cerr << "Failed to load font descriptor: " << fontDescPath << std::endl;
-        if (textureID != 0) glDeleteTextures(1, &textureID);
         return false;
     }
-    setupQuad();
-    std::cout << "TextRenderer initialized successfully." << std::endl;
+
+    setupBuffers();
+
+    std::cout << "TextRenderer initialized successfully" << std::endl;
     return true;
 }
 
-bool TextRenderer::loadFontAtlas(const std::string& atlasPath) {
-    int width, height, channels;
-    stbi_set_flip_vertically_on_load(true);
-    unsigned char* data = stbi_load(atlasPath.c_str(), &width, &height, &channels, 0);
-    if (!data) {
-        std::cerr << "Failed to load font atlas: " << atlasPath << " (" << stbi_failure_reason() << ")" << std::endl;
-        // Use a placeholder white pixel texture for testing
-        std::cout << "Creating placeholder texture..." << std::endl;
-        atlasWidth = 256;
-        atlasHeight = 256;
-        glGenTextures(1, &textureID);
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        unsigned char pixelData[] = {255, 255, 255, 255};
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        return true;
-    }
-
-    atlasWidth = static_cast<float>(width);
-    atlasHeight = static_cast<float>(height);
-    GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
+void TextRenderer::setupBuffers() {
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
     
-    std::cout << "Loaded font atlas: " << atlasPath << " (" << width << "x" << height 
-              << ", " << channels << " channels)" << std::endl;
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    
+    // Buffer size for batched rendering
+    glBufferData(GL_ARRAY_BUFFER, MAX_BATCH_VERTICES * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+    
+    // Position (vec2), UV (vec2), Color (vec3)
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 7 * sizeof(float), 0);
+    glEnableVertexAttribArray(0);
+    
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(4 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
 
+bool TextRenderer::loadFontAtlas(const std::string& atlasPath) {
+    // Generate and bind texture
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
+    
+    // Set texture parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-    glBindTexture(GL_TEXTURE_2D, 0);
     
-    stbi_image_free(data);
+    // Load texture data from file using stb_image
+    int width, height, channels;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* data = stbi_load(atlasPath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+    if (!data) {
+        std::cerr << "STB Image failed to load: " << atlasPath << " (" << stbi_failure_reason() << ")" << std::endl;
+        // Fallback: create a 16x16 white square
+        unsigned char fallbackData[16 * 16 * 4];
+        for (int i = 0; i < 16 * 16 * 4; i++) {
+            fallbackData[i] = 255;
+        }
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 16, 16, 0, GL_RGBA, GL_UNSIGNED_BYTE, fallbackData);
+        atlasWidth = 16.0f;
+        atlasHeight = 16.0f;
+    } else {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        atlasWidth = static_cast<float>(width);
+        atlasHeight = static_cast<float>(height);
+        stbi_image_free(data);
+    }
+    
+    glBindTexture(GL_TEXTURE_2D, 0);
     return true;
 }
 
 bool TextRenderer::loadFontDescriptor(const std::string& descPath) {
     std::ifstream file(descPath);
     if (!file.is_open()) {
-        std::cerr << "Cannot open font descriptor file: " << descPath << std::endl;
-        std::cout << "Setting up fallback character map..." << std::endl;
-        // Create a simple ASCII table as fallback
-        int cols = 16;
-        int rows = 6;
-        for (int i = 32; i < 128; ++i) {
-            Character ch;
-            int index = i - 32;
-            float u = static_cast<float>(index % cols) / cols;
-            float v = static_cast<float>(index / cols) / rows;
-            ch.uvBottomLeft = glm::vec2(u, v);
-            ch.uvTopRight = glm::vec2(u + 1.0f / cols, v + 1.0f / rows);
-            ch.size = glm::vec2(16, 16);
-            ch.offset = glm::vec2(0, 0);
-            ch.advance = 16;
-            characters[i] = ch;
-        }
-        return true;
-    }
-
-    std::string line;
-    std::string token;
-    float fileAtlasWidth = 0, fileAtlasHeight = 0;
-
-    characters.clear();
-
-    // Expect BMFont text format
-    while (std::getline(file, line)) {
-        std::stringstream ss(line);
-        ss >> token;
-
-        if (token == "common") {
-            while (ss >> token) {
-                if (token.find("scaleW=") == 0) fileAtlasWidth = std::stof(token.substr(7));
-                else if (token.find("scaleH=") == 0) fileAtlasHeight = std::stof(token.substr(7));
-            }
-            if (atlasWidth == 0 || atlasHeight == 0) {
-                atlasWidth = fileAtlasWidth;
-                atlasHeight = fileAtlasHeight;
-            }
-        }
-        else if (token == "char") {
-            int id = 0;
-            Character ch;
-            ch.size = glm::vec2(0, 0);
-            ch.offset = glm::vec2(0, 0);
-            ch.advance = 0;
-            
-            float x = 0, y = 0, width = 0, height = 0;
-            
-            while (ss >> token) {
-                if (token.find("id=") == 0) id = std::stoi(token.substr(3));
-                else if (token.find("x=") == 0) x = std::stof(token.substr(2));
-                else if (token.find("y=") == 0) y = std::stof(token.substr(2));
-                else if (token.find("width=") == 0) width = std::stof(token.substr(6));
-                else if (token.find("height=") == 0) height = std::stof(token.substr(7));
-                else if (token.find("xoffset=") == 0) ch.offset.x = std::stof(token.substr(8));
-                else if (token.find("yoffset=") == 0) ch.offset.y = std::stof(token.substr(8));
-                else if (token.find("xadvance=") == 0) ch.advance = std::stof(token.substr(9));
-            }
-            
-            ch.size = glm::vec2(width, height);
-            
-            // Convert pixel coords to normalized texture coords
-            ch.uvBottomLeft = glm::vec2(x / atlasWidth, (atlasHeight - (y + height)) / atlasHeight);
-            ch.uvTopRight = glm::vec2((x + width) / atlasWidth, (atlasHeight - y) / atlasHeight);
-            
-            if (id >= 32 && id <= 126) { // Basic ASCII chars
-                characters[id] = ch;
-            }
-        }
-    }
-    
-    // Check if we loaded any characters
-    if (characters.empty()) {
-        std::cerr << "No character data found in font descriptor: " << descPath << std::endl;
+        std::cerr << "Failed to open font descriptor file: " << descPath << std::endl;
         return false;
     }
     
-    return true;
-}
-
-void TextRenderer::setupQuad() {
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    // Each vertex has pos (x,y) and texcoord (u,v) = 4 floats
-    // 6 vertices per quad
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, nullptr, GL_DYNAMIC_DRAW);
-
-    // Position attribute (vec2)
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // Texture coordinate attribute (vec2)
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-}
-
-void TextRenderer::renderText(const std::string& text, float x, float y, float scale, const glm::vec3& color, const glm::mat4& projection) {
-    if (textureID == 0 || characters.empty()) {
-        std::cerr << "TextRenderer not properly initialized" << std::endl;
-        return;
+    std::string line;
+    
+    // Parse header line to get atlas size (optional)
+    if (std::getline(file, line)) {
+        // Some font format processing logic
     }
-
-    shader.use();
-    shader.setMat4("projection", projection);
-    shader.setVec3("textColor", color);
-    shader.setInt("textTexture", 0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-
-    glBindVertexArray(vao);
-
-    float currentX = x;
-    for (char c : text) {
-        if (characters.find(c) == characters.end()) {
-            // Use space if character not found
-            c = ' ';
-            if (characters.find(c) == characters.end()) {
-                // Skip if space not defined
-                continue;
+    
+    // Parse character definitions
+    while (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string token;
+        
+        // Skip non-character lines
+        if (line.substr(0, 5) != "char ") {
+            continue;
+        }
+        
+        // Parse character info
+        int id = 0, x = 0, y = 0, width = 0, height = 0, xoffset = 0, yoffset = 0, xadvance = 0;
+        
+        std::string part;
+        std::stringstream lineStream(line);
+        
+        // Parse each parameter in the line
+        while (lineStream >> part) {
+            if (part.substr(0, 3) == "id=") {
+                id = std::stoi(part.substr(3));
+            } else if (part.substr(0, 2) == "x=") {
+                x = std::stoi(part.substr(2));
+            } else if (part.substr(0, 2) == "y=") {
+                y = std::stoi(part.substr(2));
+            } else if (part.substr(0, 6) == "width=") {
+                width = std::stoi(part.substr(6));
+            } else if (part.substr(0, 7) == "height=") {
+                height = std::stoi(part.substr(7));
+            } else if (part.substr(0, 8) == "xoffset=") {
+                xoffset = std::stoi(part.substr(8));
+            } else if (part.substr(0, 8) == "yoffset=") {
+                yoffset = std::stoi(part.substr(8));
+            } else if (part.substr(0, 9) == "xadvance=") {
+                xadvance = std::stoi(part.substr(9));
             }
         }
+        
+        // Only add if this is a valid ASCII character
+        if (id >= 0 && id < 128) {
+            Character character;
+            
+            // Calculate UV coordinates within atlas
+            character.uvBottomLeft = glm::vec2(
+                static_cast<float>(x) / atlasWidth,
+                1.0f - static_cast<float>(y + height) / atlasHeight
+            );
+            character.uvTopRight = glm::vec2(
+                static_cast<float>(x + width) / atlasWidth,
+                1.0f - static_cast<float>(y) / atlasHeight
+            );
+            
+            character.size = glm::vec2(static_cast<float>(width), static_cast<float>(height));
+            character.offset = glm::vec2(static_cast<float>(xoffset), static_cast<float>(yoffset));
+            character.advance = static_cast<float>(xadvance);
+            
+            characters.insert(std::pair<char, Character>(static_cast<char>(id), character));
+        }
+    }
+    
+    std::cout << "Loaded " << characters.size() << " characters from font descriptor" << std::endl;
+    return !characters.empty();
+}
 
-        Character& ch = characters[c];
-
-        float xpos = currentX + ch.offset.x * scale;
+void TextRenderer::generateVertices(const std::string& text, float x, float y, float scale, 
+                                  const glm::vec3& color, std::vector<float>& vertices) {
+    float cursorX = x;
+    
+    for (char c : text) {
+        auto it = characters.find(c);
+        if (it == characters.end()) continue;
+        
+        const Character& ch = it->second;
+        float xpos = cursorX + ch.offset.x * scale;
         float ypos = y - (ch.size.y - ch.offset.y) * scale;
         float w = ch.size.x * scale;
         float h = ch.size.y * scale;
-
-        float vertices[] = {
-            xpos,     ypos + h, ch.uvBottomLeft.x, ch.uvTopRight.y,
-            xpos + w, ypos + h, ch.uvTopRight.x,   ch.uvTopRight.y,
-            xpos + w, ypos,     ch.uvTopRight.x,   ch.uvBottomLeft.y,
-            xpos,     ypos + h, ch.uvBottomLeft.x, ch.uvTopRight.y,
-            xpos + w, ypos,     ch.uvTopRight.x,   ch.uvBottomLeft.y,
-            xpos,     ypos,     ch.uvBottomLeft.x, ch.uvBottomLeft.y
+        
+        // 6 vertices per character (2 triangles)
+        float quad[] = {
+            // pos.x, pos.y, uv.x, uv.y, color.r, color.g, color.b
+            xpos,     ypos + h, ch.uvBottomLeft.x, ch.uvTopRight.y,   color.r, color.g, color.b,
+            xpos,     ypos,     ch.uvBottomLeft.x, ch.uvBottomLeft.y, color.r, color.g, color.b,
+            xpos + w, ypos,     ch.uvTopRight.x,   ch.uvBottomLeft.y, color.r, color.g, color.b,
+            
+            xpos,     ypos + h, ch.uvBottomLeft.x, ch.uvTopRight.y,   color.r, color.g, color.b,
+            xpos + w, ypos,     ch.uvTopRight.x,   ch.uvBottomLeft.y, color.r, color.g, color.b,
+            xpos + w, ypos + h, ch.uvTopRight.x,   ch.uvTopRight.y,   color.r, color.g, color.b
         };
-
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        currentX += ch.advance * scale;
+        
+        vertices.insert(vertices.end(), quad, quad + 42); // 6 vertices * 7 floats each
+        cursorX += ch.advance * scale;
     }
+}
 
+void TextRenderer::addToBatch(const std::string& text, float x, float y, float scale, const glm::vec3& color) {
+    // Check if text is cached
+    auto it = cachedText.find(text);
+    if (it != cachedText.end() && 
+        it->second.x == x && 
+        it->second.y == y && 
+        it->second.scale == scale &&
+        it->second.color == color) {
+        // Use cached vertices
+        batchedVertices.insert(batchedVertices.end(), 
+                             it->second.vertices.begin(), 
+                             it->second.vertices.end());
+    } else {
+        // Generate new vertices
+        std::vector<float> vertices;
+        generateVertices(text, x, y, scale, color, vertices);
+        
+        // Cache the text if it's not too large
+        if (vertices.size() <= MAX_BATCH_VERTICES / 4) { // Allow caching if less than 25% of max batch
+            TextInstance instance{text, x, y, scale, color, vertices};
+            cachedText[text] = instance;
+        }
+        
+        batchedVertices.insert(batchedVertices.end(), vertices.begin(), vertices.end());
+    }
+    
+    // Flush if batch is full
+    if (batchedVertices.size() >= MAX_BATCH_VERTICES) {
+        flushBatch(glm::mat4(1.0f)); // Use identity matrix as projection will be set later
+    }
+}
+
+void TextRenderer::flushBatch(const glm::mat4& projection) {
+    if (batchedVertices.empty()) return;
+    
+    shader.use();
+    shader.setMat4("projection", projection);
+    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, batchedVertices.size() * sizeof(float), batchedVertices.data());
+    
+    glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(batchedVertices.size() / 7));
+    
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
+    
+    batchedVertices.clear();
 }
+
+void TextRenderer::renderText(const std::string& text, float x, float y, float scale, 
+                            const glm::vec3& color, const glm::mat4& projection) {
+    addToBatch(text, x, y, scale, color);
+    flushBatch(projection);
 }
+
+void TextRenderer::renderBatch(const glm::mat4& projection) {
+    flushBatch(projection);
+}
+
+} 
