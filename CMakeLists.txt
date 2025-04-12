@@ -8,16 +8,27 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Find dependencies
+# --- Fetch Dependencies ---
+include(FetchContent)
+
+# Declare GLFW dependency
+FetchContent_Declare(
+    glfw
+    GIT_REPOSITORY https://github.com/glfw/glfw.git
+    GIT_TAG 3.4 # Use a specific stable tag
+)
+
+# Make GLFW available (downloads and configures)
+FetchContent_MakeAvailable(glfw)
+# --- End Fetch Dependencies ---
+
+
+# Find standard dependencies
 find_package(OpenGL REQUIRED)
 
-# Add GLFW (assuming submodule or system-installed)
-# Make sure GLFW is placed in lib/glfw or installed system-wide
-add_subdirectory(lib/glfw)
-
-# Add GLM (header-only, assuming submodule)
-# Make sure GLM is placed in lib/glm or installed system-wide
-include_directories(lib/glm)
+# Add GLM (header-only, assuming submodule or path added)
+# Make sure GLM is placed in lib/glm or its path is known
+include_directories(lib/glm) # Keep this if GLM is in lib/glm
 
 # Add GLAD (generated files in lib/glad)
 # Ensure glad.c and glad.h are placed correctly in lib/glad
@@ -44,10 +55,7 @@ add_executable(NewEngine src/main.cpp ${SOURCES} ${HEADERS})
 target_include_directories(NewEngine PRIVATE include)
 
 # Link libraries
-# Ensure GLFW library target name is correct (e.g., glfw if using add_subdirectory)
-# target_link_libraries(NewEngine PRIVATE glad glfw OpenGL::GL) # Placeholder, adjust based on GLFW integration
-
-# Example linking if GLFW is added via add_subdirectory:
+# GLFW target is now provided by FetchContent_MakeAvailable
 target_link_libraries(NewEngine PRIVATE glad glfw OpenGL::GL)
 
 
@@ -70,6 +78,6 @@ add_custom_command(TARGET NewEngine POST_BUILD
 
 # Build instructions comment (for reference)
 # 1. mkdir build && cd build
-# 2. cmake .. [options] # e.g., -DGLFW_BUILD_DOCS=OFF if using GLFW submodule
+# 2. cmake ..
 # 3. cmake --build .
 # 4. Run ./bin/NewEngine (or .\bin\NewEngine.exe on Windows) 
