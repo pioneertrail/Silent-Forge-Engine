@@ -59,22 +59,19 @@ target_include_directories(NewEngine PRIVATE include)
 target_link_libraries(NewEngine PRIVATE glad glfw OpenGL::GL)
 
 
-# Platform-specific settings (Example - may need adjustment)
+# Platform-specific settings
 if (WIN32)
-    # Link necessary Windows libraries if needed
-    # target_link_libraries(NewEngine PRIVATE gdi32 user32 shell32) # Example
+    # Example: target_link_libraries(NewEngine PRIVATE gdi32 user32 shell32)
 elseif (APPLE)
-    # Link necessary macOS frameworks if needed
-    # target_link_libraries(NewEngine PRIVATE "-framework Cocoa" "-framework OpenGL" "-framework IOKit") # Example
+    # Example: target_link_libraries(NewEngine PRIVATE "-framework Cocoa" "-framework OpenGL" "-framework IOKit")
 endif()
 
-# Copy shaders to build directory (Optional, but helpful)
-# This assumes your executable runs from CMAKE_RUNTIME_OUTPUT_DIRECTORY
-file(GLOB SHADER_FILES "${CMAKE_SOURCE_DIR}/shaders/*")
+# Copy shaders to build directory
+# $<TARGET_FILE_DIR:NewEngine> resolves to the directory containing the executable for the current build configuration.
 add_custom_command(TARGET NewEngine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/shaders $<TARGET_FILE_DIR:NewEngine>/shaders
-    COMMENT "Copying shaders to build directory")
+    COMMENT "Copying shaders to executable directory")
 
 # Build instructions comment (for reference)
 # 1. mkdir build && cd build
