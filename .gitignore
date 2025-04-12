@@ -1,0 +1,54 @@
+# Build directories
+build/
+bin/
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# User-specific files
+*.user
+*.suo
+*.userprefs
+*.sdf
+*.opensdf
+
+# Dependency directories
+# We do want to include our selected versions of libraries
+# Note: Since we're using git submodules or direct inclusion for libraries,
+# we actually *do* want to include lib/glad, lib/glfw, and lib/glm
+# So we'll specifically exclude other libraries if needed 
