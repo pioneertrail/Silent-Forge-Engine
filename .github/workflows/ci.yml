@@ -1,0 +1,113 @@
+name: Multi-Agent CI
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Set up CMake
+      uses: actions/setup-cmake@v3
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTS=ON
+
+    - name: Build
+      run: cmake --build build --config ${{ matrix.build_type }}
+
+    - name: Run Tests
+      run: |
+        cd build
+        ctest --output-on-failure
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check clang-format
+      run: |
+        find src include -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run --Werror
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Run clang-tidy
+      run: |
+        find src include -name '*.cpp' | xargs clang-tidy -p build
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check Documentation
+      run: |
+        # Check for missing documentation
+        find src include -name '*.h' | xargs grep -L "@brief" || true
+        # Check changelog format
+        grep -q "## \[Unreleased\]" CHANGELOG.md
+
+  agent-specific:
+    needs: [build, format, lint, docs]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check Agent Branch
+      run: |
+        if [[ "$GITHUB_HEAD_REF" == *"agent1"* ]]; then
+          echo "Core Systems Agent - Running performance checks"
+          # Add performance profiling steps
+        elif [[ "$GITHUB_HEAD_REF" == *"agent2"* ]]; then
+          echo "Auxiliary Systems Agent - Running compatibility checks"
+          # Add cross-platform compatibility checks
+        elif [[ "$GITHUB_HEAD_REF" == *"agent3"* ]]; then
+          echo "Testing & Documentation Agent - Running documentation checks"
+          # Add documentation completeness checks
+        fi
+
+    - name: Check Test Coverage
+      if: contains(github.head_ref, 'agent3')
+      run: |
+        # Run coverage analysis
+        cd build
+        ctest -T coverage
+        # Check coverage threshold
+        python3 ../scripts/check_coverage.py 80
+
+    - name: Check Documentation Updates
+      if: contains(github.head_ref, 'agent3')
+      run: |
+        # Check if documentation was updated
+        git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep -q "docs/"
+
+    - name: Check Performance Impact
+      if: contains(github.head_ref, 'agent1')
+      run: |
+        # Run performance benchmarks
+        cd build
+        ./bin/benchmarks
+        # Compare with baseline
+        python3 ../scripts/compare_performance.py
+
+    - name: Check Cross-Platform Compatibility
+      if: contains(github.head_ref, 'agent2')
+      run: |
+        # Run platform-specific checks
+        python3 scripts/check_platform_compatibility.py 

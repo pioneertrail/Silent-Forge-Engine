@@ -4,76 +4,63 @@
 
 namespace SFE { // Changed namespace to SFE
 
-Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices)
-    : vertexCount(static_cast<GLsizei>(vertices.size())), 
-      indexCount(static_cast<GLsizei>(indices.size())), 
-      texture(nullptr),
-      useEBO(!indices.empty())
-{
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    if (useEBO) {
-        glGenBuffers(1, &ebo);
-    }
-
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
-
-    if (useEBO) {
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
-    }
-
-    // Position attribute (x, y, z)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
-    glEnableVertexAttribArray(0);
-    
-    // Texture coordinate attribute (u, v)
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoord));
-    glEnableVertexAttribArray(1);
-    
-    // Normal attribute (nx, ny, nz)
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(2);
-
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    // Note: Don't unbind EBO while VAO is active as VAO stores the EBO binding
-    
-    std::cout << "Mesh created (VAO: " << vao << ") - Vertices: " << vertexCount 
-              << (useEBO ? ", Indices: " + std::to_string(indexCount) : "") << std::endl;
+Mesh::Mesh() : m_VAO(0), m_VBO(0), m_EBO(0), m_indexCount(0), m_texture(nullptr) {
+    glGenVertexArrays(1, &m_VAO);
+    glGenBuffers(1, &m_VBO);
+    glGenBuffers(1, &m_EBO);
 }
 
 Mesh::~Mesh() {
-    glDeleteVertexArrays(1, &vao);
-    glDeleteBuffers(1, &vbo);
-    if (useEBO) {
-        glDeleteBuffers(1, &ebo);
-    }
-    std::cout << "Mesh deleted (VAO: " << vao << ")" << std::endl;
+    if (m_EBO) glDeleteBuffers(1, &m_EBO);
+    if (m_VBO) glDeleteBuffers(1, &m_VBO);
+    if (m_VAO) glDeleteVertexArrays(1, &m_VAO);
 }
 
-void Mesh::draw() const {
-    if (texture) {
-        texture->bind(0);
+void Mesh::setVertices(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {
+    glBindVertexArray(m_VAO);
+
+    // Vertex data
+    glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+
+    // Index data
+    m_indexCount = static_cast<GLsizei>(indices.size());
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+    // Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // Normal attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+    glEnableVertexAttribArray(1);
+
+    // Texture coordinate attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoord));
+    glEnableVertexAttribArray(2);
+
+    glBindVertexArray(0);
+}
+
+void Mesh::setTexture(Texture* texture) {
+    m_texture = texture;
+}
+
+void Mesh::render() const {
+    if (m_texture) {
+        m_texture->bind();
     }
-    
-    glBindVertexArray(vao);
-    if (useEBO) {
-        glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
-    } else {
-        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+
+    glBindVertexArray(m_VAO);
+    if (m_indexCount > 0) {
+        glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
     }
     glBindVertexArray(0);
-    
-    if (texture) {
-        glBindTexture(GL_TEXTURE_2D, 0);
-    }
-}
 
-void Mesh::setTexture(std::shared_ptr<Texture> tex) {
-    texture = tex;
+    if (m_texture) {
+        m_texture->unbind();
+    }
 }
 
 } // End namespace SFE 

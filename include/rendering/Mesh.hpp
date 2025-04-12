@@ -4,21 +4,27 @@
 #include <cstddef> // For size_t
 #include <memory>
 #include "rendering/Texture.hpp"
+#include <GL/glew.h>
+#include <string>
+#include <glm/glm.hpp>
 
 namespace SFE { // Changed namespace to SFE
 
 class Mesh {
 public:
     struct Vertex {
-        float position[3];
-        float texCoord[2];
-        float normal[3];    // Added normal vector for lighting
+        glm::vec3 position;
+        glm::vec3 normal;
+        glm::vec2 texCoord;
     };
 
-    // Constructor taking vertex data and optionally index data
-    Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices = {});
-    
+    Mesh();
     ~Mesh();
+
+    bool loadFromFile(const std::string& filename);
+    void setVertices(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
+    void setTexture(Texture* texture);
+    void render() const;
 
     // Rule of five: Prevent copying/moving for simple resource management
     Mesh(const Mesh&) = delete;
@@ -31,10 +37,11 @@ public:
     void setTexture(std::shared_ptr<Texture> tex);
 
 private:
-    GLuint vao, vbo, ebo; // Vertex Array Object, Vertex Buffer Object, Element Buffer Object
-    GLsizei vertexCount;  // Number of vertices
-    GLsizei indexCount;   // Number of indices
-    std::shared_ptr<Texture> texture;
+    GLuint m_VAO;
+    GLuint m_VBO;
+    GLuint m_EBO;
+    GLsizei m_indexCount;
+    Texture* m_texture;
     bool useEBO;          // Whether to use indexed drawing
 };
 } // End namespace SFE 
