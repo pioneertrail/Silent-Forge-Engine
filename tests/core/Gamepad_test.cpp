@@ -1,152 +1,163 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include "core/Gamepad.hpp"
 #include "core/config.h"
+#include "utils/log.h"
 #include <SDL2/SDL.h>
 
-// Mock SDL for testing
-struct SDLMock {
-    static bool initialized;
-    static bool controllerOpen;
-    static std::vector<bool> buttons;
-    static std::vector<Sint16> axes;
-    static std::string controllerName;
+namespace sfe {
 
-    static int SDL_InitSubSystem(uint32_t) {
-        initialized = true;
-        return 0;
-    }
-    static void SDL_QuitSubSystem(uint32_t) { initialized = false; }
-    static int SDL_NumJoysticks() { return 1; }
-    static SDL_bool SDL_IsGameController(int) { return SDL_TRUE; }
+// Mock SDL for testing without hardware
+struct SDLMock {
+    static bool initSuccess;
+    static bool controllerOpen;
+    static bool buttonState;
+    static float axisValue;
+    static const char* controllerName;
+
+    static int SDL_Init(uint32_t) { return initSuccess ? 0 : -1; }
     static SDL_GameController* SDL_GameControllerOpen(int) {
-        controllerOpen = true;
-        return reinterpret_cast<SDL_GameController*>(1);
+        return controllerOpen ? reinterpret_cast<SDL_GameController*>(1) : nullptr;
     }
-    static void SDL_GameControllerClose(SDL_GameController*) { controllerOpen = false; }
-    static void SDL_GameControllerUpdate() {}
-    static int SDL_GameControllerGetButton(SDL_GameController*, SDL_GameControllerButton b) {
-        return buttons[b] ? 1 : 0;
+    static bool SDL_GameControllerGetButton(SDL_GameController*, SDL_GameControllerButton) {
+        return buttonState;
     }
-    static Sint16 SDL_GameControllerGetAxis(SDL_GameController*, SDL_GameControllerAxis a) {
-        return axes[a];
+    static Sint16 SDL_GameControllerGetAxis(SDL_GameController*, SDL_GameControllerAxis) {
+        return static_cast<Sint16>(axisValue * 32767.0f);
     }
-    static const char* SDL_GameControllerName(SDL_GameController*) { return controllerName.c_str(); }
-    static SDL_bool SDL_GameControllerHasButton(SDL_GameController*, SDL_GameControllerButton b) {
-        return b < SDL_CONTROLLER_BUTTON_MAX ? SDL_TRUE : SDL_FALSE;
+    static const char* SDL_GameControllerName(SDL_GameController*) {
+        return controllerName;
     }
-    static SDL_bool SDL_GameControllerHasAxis(SDL_GameController*, SDL_GameControllerAxis a) {
-        return a < SDL_CONTROLLER_AXIS_MAX ? SDL_TRUE : SDL_FALSE;
-    }
+    static void SDL_GameControllerClose(SDL_GameController*) {}
+    static void SDL_Quit() {}
 };
 
-bool SDLMock::initialized = false;
-bool SDLMock::controllerOpen = false;
-std::vector<bool> SDLMock::buttons(SDL_CONTROLLER_BUTTON_MAX, false);
-std::vector<Sint16> SDLMock::axes(SDL_CONTROLLER_AXIS_MAX, 0);
-std::string SDLMock::controllerName = "TestPad";
+bool SDLMock::initSuccess = true;
+bool SDLMock::controllerOpen = true;
+bool SDLMock::buttonState = false;
+float SDLMock::axisValue = 0.0f;
+const char* SDLMock::controllerName = "Test Controller";
 
-// Override SDL functions with mocks
-#define SDL_InitSubSystem SDLMock::SDL_InitSubSystem
-#define SDL_QuitSubSystem SDLMock::SDL_QuitSubSystem
-#define SDL_NumJoysticks SDLMock::SDL_NumJoysticks
-#define SDL_IsGameController SDLMock::SDL_IsGameController
+// Override SDL functions for testing
+#define SDL_Init SDLMock::SDL_Init
 #define SDL_GameControllerOpen SDLMock::SDL_GameControllerOpen
-#define SDL_GameControllerClose SDLMock::SDL_GameControllerClose
-#define SDL_GameControllerUpdate SDLMock::SDL_GameControllerUpdate
 #define SDL_GameControllerGetButton SDLMock::SDL_GameControllerGetButton
 #define SDL_GameControllerGetAxis SDLMock::SDL_GameControllerGetAxis
 #define SDL_GameControllerName SDLMock::SDL_GameControllerName
-#define SDL_GameControllerHasButton SDLMock::SDL_GameControllerHasButton
-#define SDL_GameControllerHasAxis SDLMock::SDL_GameControllerHasAxis
+#define SDL_GameControllerClose SDLMock::SDL_GameControllerClose
+#define SDL_Quit SDLMock::SDL_Quit
 
-TEST_CASE("Gamepad initialization and shutdown", "[Gamepad]") {
-    SECTION("Initialize and shutdown") {
-        sfe::Gamepad gamepad;
+TEST_CASE("Gamepad initialization and connection", "[Gamepad]") {
+    SECTION("Successful initialization") {
+        SDLMock::initSuccess = true;
+        SDLMock::controllerOpen = true;
+        Gamepad gamepad;
         REQUIRE(gamepad.initialize());
         REQUIRE(gamepad.isConnected());
-        REQUIRE(gamepad.getName() == "TestPad");
-        gamepad.shutdown();
+    }
+
+    SECTION("SDL initialization failure") {
+        SDLMock::initSuccess = false;
+        Gamepad gamepad;
+        REQUIRE_FALSE(gamepad.initialize());
         REQUIRE_FALSE(gamepad.isConnected());
     }
 
-    SECTION("Initialize failure") {
-        SDLMock::initialized = false;
-        sfe::Gamepad gamepad;
-        REQUIRE_FALSE(gamepad.initialize());
+    SECTION("No controller available") {
+        SDLMock::initSuccess = true;
+        SDLMock::controllerOpen = false;
+        Gamepad gamepad;
+        REQUIRE(gamepad.initialize());
         REQUIRE_FALSE(gamepad.isConnected());
     }
 }
 
-TEST_CASE("Gamepad button states", "[Gamepad]") {
-    sfe::Gamepad gamepad;
+TEST_CASE("Gamepad button and axis support", "[Gamepad]") {
+    Gamepad gamepad;
     REQUIRE(gamepad.initialize());
 
     SECTION("Button support validation") {
         REQUIRE(gamepad.isButtonSupported(SDL_CONTROLLER_BUTTON_A));
+        REQUIRE(gamepad.isButtonSupported(SDL_CONTROLLER_BUTTON_B));
+        REQUIRE_FALSE(gamepad.isButtonSupported(static_cast<SDL_GameControllerButton>(-1)));
         REQUIRE_FALSE(gamepad.isButtonSupported(static_cast<SDL_GameControllerButton>(SDL_CONTROLLER_BUTTON_MAX)));
     }
 
-    SECTION("Button state polling") {
-        SDLMock::buttons[SDL_CONTROLLER_BUTTON_A] = true;
-        REQUIRE(gamepad.pollEvents());
-        REQUIRE(gamepad.getButtonState(SDL_CONTROLLER_BUTTON_A));
-        REQUIRE_FALSE(gamepad.getButtonState(SDL_CONTROLLER_BUTTON_B));
-    }
-
-    SECTION("Button state without polling") {
-        SDLMock::buttons[SDL_CONTROLLER_BUTTON_A] = true;
-        REQUIRE_FALSE(gamepad.getButtonState(SDL_CONTROLLER_BUTTON_A));
+    SECTION("Axis support validation") {
+        REQUIRE(gamepad.isAxisSupported(SDL_CONTROLLER_AXIS_LEFTX));
+        REQUIRE(gamepad.isAxisSupported(SDL_CONTROLLER_AXIS_LEFTY));
+        REQUIRE_FALSE(gamepad.isAxisSupported(static_cast<SDL_GameControllerAxis>(-1)));
+        REQUIRE_FALSE(gamepad.isAxisSupported(static_cast<SDL_GameControllerAxis>(SDL_CONTROLLER_AXIS_MAX)));
     }
 }
 
-TEST_CASE("Gamepad axis states", "[Gamepad]") {
-    sfe::Gamepad gamepad;
+TEST_CASE("Gamepad state and input", "[Gamepad]") {
+    Gamepad gamepad;
     REQUIRE(gamepad.initialize());
 
-    SECTION("Axis support validation") {
-        REQUIRE(gamepad.isAxisSupported(SDL_CONTROLLER_AXIS_LEFTX));
-        REQUIRE_FALSE(gamepad.isAxisSupported(static_cast<SDL_GameControllerAxis>(SDL_CONTROLLER_AXIS_MAX)));
-    }
-
-    SECTION("Axis value polling") {
-        SDLMock::axes[SDL_CONTROLLER_AXIS_LEFTX] = 16384; // ~0.5
+    SECTION("Button state") {
+        SDLMock::buttonState = true;
         REQUIRE(gamepad.pollEvents());
-        REQUIRE(gamepad.getAxisValue(SDL_CONTROLLER_AXIS_LEFTX) == Approx(0.5f));
-        REQUIRE(gamepad.getAxisValue(SDL_CONTROLLER_AXIS_LEFTY) == 0.0f);
+        REQUIRE(gamepad.getButtonState(SDL_CONTROLLER_BUTTON_A));
+
+        SDLMock::buttonState = false;
+        REQUIRE(gamepad.pollEvents());
+        REQUIRE_FALSE(gamepad.getButtonState(SDL_CONTROLLER_BUTTON_A));
     }
 
-    SECTION("Axis value without polling") {
-        SDLMock::axes[SDL_CONTROLLER_AXIS_LEFTX] = 16384;
-        REQUIRE(gamepad.getAxisValue(SDL_CONTROLLER_AXIS_LEFTX) == 0.0f);
+    SECTION("Axis value") {
+        SDLMock::axisValue = 0.5f;
+        REQUIRE(gamepad.pollEvents());
+        REQUIRE_THAT(gamepad.getAxisValue(SDL_CONTROLLER_AXIS_LEFTX), Catch::Matchers::WithinRel(0.5f));
+
+        SDLMock::axisValue = -0.5f;
+        REQUIRE(gamepad.pollEvents());
+        REQUIRE_THAT(gamepad.getAxisValue(SDL_CONTROLLER_AXIS_LEFTX), Catch::Matchers::WithinRel(-0.5f));
     }
 }
 
 TEST_CASE("Gamepad configuration integration", "[Gamepad]") {
-    sfe::Gamepad gamepad;
-    sfe::Config config;
+    Gamepad gamepad;
     REQUIRE(gamepad.initialize());
 
-    SECTION("Button action mapping") {
-        SDLMock::buttons[SDL_CONTROLLER_BUTTON_A] = true;
+    SECTION("Mapped actions") {
+        Config config;
+        REQUIRE(config.loadGamepadBindings("tests/fixtures/valid_gamepad.json"));
+        
+        SDLMock::buttonState = true;
         REQUIRE(gamepad.pollEvents());
-        REQUIRE(gamepad.getMappedAction(SDL_CONTROLLER_BUTTON_A, config).empty());
+        REQUIRE(gamepad.getMappedAction(SDL_CONTROLLER_BUTTON_A, config) == "jump");
+        REQUIRE(gamepad.getMappedAction(SDL_CONTROLLER_BUTTON_B, config) == "attack");
     }
 
-    SECTION("Unsupported button mapping") {
-        REQUIRE(gamepad.getMappedAction(static_cast<SDL_GameControllerButton>(SDL_CONTROLLER_BUTTON_MAX), config).empty());
+    SECTION("Invalid configuration") {
+        Config config;
+        REQUIRE_FALSE(config.loadGamepadBindings("tests/fixtures/invalid_gamepad.json"));
     }
 }
 
-// Restore original SDL functions
-#undef SDL_InitSubSystem
-#undef SDL_QuitSubSystem
-#undef SDL_NumJoysticks
-#undef SDL_IsGameController
+TEST_CASE("Gamepad name and identification", "[Gamepad]") {
+    Gamepad gamepad;
+    REQUIRE(gamepad.initialize());
+
+    SECTION("Connected gamepad name") {
+        SDLMock::controllerName = "Xbox Controller";
+        REQUIRE(gamepad.getName() == "Xbox Controller");
+    }
+
+    SECTION("No gamepad name") {
+        SDLMock::controllerOpen = false;
+        REQUIRE(gamepad.getName() == "No Gamepad");
+    }
+}
+
+// Restore SDL functions
+#undef SDL_Init
 #undef SDL_GameControllerOpen
-#undef SDL_GameControllerClose
-#undef SDL_GameControllerUpdate
 #undef SDL_GameControllerGetButton
 #undef SDL_GameControllerGetAxis
 #undef SDL_GameControllerName
-#undef SDL_GameControllerHasButton
-#undef SDL_GameControllerHasAxis 
+#undef SDL_GameControllerClose
+#undef SDL_Quit
+
+} // namespace sfe 

@@ -1,0 +1,10 @@
+{
+    "buttons": {
+        "invalid": "jump",
+        "-1": "attack"
+    },
+    "axes": {
+        "0": {"min": 1.0, "max": -1.0},
+        "invalid": {"min": -1.0, "max": 1.0}
+    }
+} 
