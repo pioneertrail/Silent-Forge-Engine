@@ -3,6 +3,7 @@ build/
 out/
 bin/
 lib/
+build_msvc/
 
 # IDE files
 .vscode/
@@ -175,4 +176,13 @@ bower_components/
 # Keep assets
 !assets/fonts/*.png
 !assets/fonts/*.fnt
-!assets/textures/*.png 
+!assets/textures/*.png
+
+# Backup and temporary files
+*.bak
+*.orig
+CMakeLists.txt.bak
+CMakeLists.txt.orig
+*.bak.cpp
+*.bak.h
+*.bak.hpp 
