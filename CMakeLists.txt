@@ -130,12 +130,20 @@ find_library(GTEST_LIBRARY NAMES gtest)
 find_library(GTEST_MAIN_LIBRARY NAMES gtest_main)
 
 # Add GLAD (generated files in lib/glad)
-add_library(glad STATIC lib/glad/src/glad.c)
-target_include_directories(glad PUBLIC lib/glad/include)
-set_target_properties(glad PROPERTIES
-    LINKER_LANGUAGE C
-    POSITION_INDEPENDENT_CODE ON
-)
+if(MSVC)
+    # For MSVC builds, find the precompiled GLAD library from vcpkg
+    find_package(glad CONFIG REQUIRED)
+    set(GLAD_LIBRARIES glad::glad)
+else()
+    # For other builds, compile from source
+    add_library(glad STATIC lib/glad/src/glad.c)
+    target_include_directories(glad PUBLIC lib/glad/include)
+    set_target_properties(glad PROPERTIES
+        LINKER_LANGUAGE C
+        POSITION_INDEPENDENT_CODE ON
+    )
+    set(GLAD_LIBRARIES glad)
+endif()
 
 # Download stb headers if not present
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/include/stb/stb_image.h")
@@ -209,7 +217,7 @@ target_compile_definitions(SilentForgeEngine PRIVATE
 )
 
 # Link libraries - always link glad
-target_link_libraries(SilentForgeEngine PRIVATE glad)
+target_link_libraries(SilentForgeEngine PRIVATE ${GLAD_LIBRARIES})
 
 # Conditionally link other dependencies
 if(NOT SKIP_DEPENDENCIES)
