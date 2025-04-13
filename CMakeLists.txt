@@ -6,7 +6,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-project(SilentForgeEngine LANGUAGES CXX)
+project(SilentForgeEngine LANGUAGES CXX C)
 
 # Build options
 option(USE_PRECOMPILED_HEADERS "Use precompiled headers for faster builds" ON)
@@ -136,6 +136,7 @@ if(MSVC)
     set(GLAD_LIBRARIES glad::glad)
 else()
     # For other builds, compile from source
+    set(CMAKE_C_COMPILER ${CMAKE_CXX_COMPILER})
     add_library(glad STATIC lib/glad/src/glad.c)
     target_include_directories(glad PUBLIC lib/glad/include)
     set_target_properties(glad PROPERTIES
@@ -146,52 +147,42 @@ else()
 endif()
 
 # Download stb headers if not present
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/include/stb/stb_image.h")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/third_party/stb/stb_image.h")
     message(STATUS "Downloading stb_image.h...")
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/lib/include/stb")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/lib/third_party/stb")
     file(DOWNLOAD
         "https://raw.githubusercontent.com/nothings/stb/master/stb_image.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/lib/include/stb/stb_image.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/third_party/stb/stb_image.h"
         SHOW_PROGRESS
     )
 endif()
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/include/stb/stb_image_write.h")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/third_party/stb/stb_image_write.h")
     message(STATUS "Downloading stb_image_write.h...")
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/lib/include/stb")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/lib/third_party/stb")
     file(DOWNLOAD
         "https://raw.githubusercontent.com/nothings/stb/master/stb_image_write.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/lib/include/stb/stb_image_write.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/third_party/stb/stb_image_write.h"
         SHOW_PROGRESS
     )
 endif()
 
-# Source files - use explicit file lists instead of GLOB
-set(CORE_SOURCES
-    src/core/Gamepad.cpp
-    src/core/SceneNode.cpp
-    src/core/InputManager.cpp
-    src/core/Camera.cpp
-    src/core/Application.cpp
-)
+# Initialize all sources variable
+set(ALL_SOURCES "")
 
-set(RENDERING_SOURCES
-    src/rendering/Shader.cpp
-    src/rendering/Mesh.cpp
-    src/rendering/InstancedMesh.cpp
-    src/rendering/Texture.cpp
-    src/rendering/GLContext.cpp
-    src/rendering/GLContextHelper.cpp
-    src/rendering/GLStateCache.cpp
-)
+# Include subdirectories with CMakeLists.txt files
+add_subdirectory(src/core)
+add_subdirectory(src/rendering)
+add_subdirectory(src/input)
+add_subdirectory(src/utils)
 
 # Main executable
-add_executable(SilentForgeEngine src/app/main.cpp ${CORE_SOURCES} ${RENDERING_SOURCES})
+add_executable(SilentForgeEngine src/app/main.cpp ${ALL_SOURCES})
 
 # Include directories for the project sources
 target_include_directories(SilentForgeEngine 
     PRIVATE 
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/lib/include
+    ${CMAKE_SOURCE_DIR}/lib/third_party
     ${SDL2_INCLUDE_DIR}
     ${GTEST_INCLUDE_DIR}
 )
@@ -210,10 +201,17 @@ if(USE_PRECOMPILED_HEADERS)
   )
 endif()
 
-
 # Add compile definitions to ensure correct include order
 target_compile_definitions(SilentForgeEngine PRIVATE
     GLFW_INCLUDE_NONE
+)
+
+# Link module libraries
+target_link_libraries(SilentForgeEngine PRIVATE
+    core
+    rendering
+    input
+    utils
 )
 
 # Link libraries - always link glad
