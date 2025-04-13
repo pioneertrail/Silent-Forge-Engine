@@ -1,13 +1,16 @@
 #include "input/gamepad.h"
+#include "utils/log.h"
 #include <algorithm>
 #include <stdexcept>
 
-namespace SilentForge {
+namespace sfe {
 
 Gamepad::Gamepad() : m_initialized(false) {
     if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) < 0) {
-        throw std::runtime_error("Failed to initialize SDL gamepad subsystem");
+        LOG_ERROR("Failed to initialize SDL gamepad subsystem: " + std::string(SDL_GetError()));
+        throw std::runtime_error("SDL gamepad init failed");
     }
+    LOG_INFO("Initialized gamepad subsystem");
     m_initialized = true;
 
     // Pre-allocate space for up to 4 gamepads
@@ -22,11 +25,15 @@ Gamepad::~Gamepad() {
     }
     if (m_initialized) {
         SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+        LOG_INFO("Shut down gamepad subsystem");
     }
 }
 
 bool Gamepad::pollEvents() {
-    if (!m_initialized) return false;
+    if (!m_initialized) {
+        LOG_ERROR("Gamepad subsystem not initialized");
+        return false;
+    }
 
     // Update SDL's internal gamepad state
     SDL_GameControllerUpdate();
@@ -42,6 +49,7 @@ bool Gamepad::pollEvents() {
                 newState.buttonStates.resize(SDL_CONTROLLER_BUTTON_MAX);
                 newState.axisValues.resize(SDL_CONTROLLER_AXIS_MAX);
                 m_gamepads.push_back(std::move(newState));
+                LOG_INFO("Connected gamepad " + std::to_string(i));
             }
         }
 
@@ -76,18 +84,26 @@ bool Gamepad::isConnected(int index) const {
            m_gamepads[index].controller != nullptr;
 }
 
+bool Gamepad::isButtonSupported(SDL_GameControllerButton button) const {
+    return button < SDL_CONTROLLER_BUTTON_MAX;
+}
+
+bool Gamepad::isAxisSupported(SDL_GameControllerAxis axis) const {
+    return axis < SDL_CONTROLLER_AXIS_MAX;
+}
+
 bool Gamepad::getButtonState(int index, SDL_GameControllerButton button) const {
-    if (!isConnected(index) || button >= SDL_CONTROLLER_BUTTON_MAX) {
+    if (!isConnected(index) || !isButtonSupported(button)) {
         return false;
     }
     return m_gamepads[index].buttonStates[button];
 }
 
 float Gamepad::getAxisValue(int index, SDL_GameControllerAxis axis) const {
-    if (!isConnected(index) || axis >= SDL_CONTROLLER_AXIS_MAX) {
+    if (!isConnected(index) || !isAxisSupported(axis)) {
         return 0.0f;
     }
     return m_gamepads[index].axisValues[axis];
 }
 
-} // namespace SilentForge 
+} // namespace sfe 

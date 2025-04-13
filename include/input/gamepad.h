@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-namespace SilentForge {
+namespace sfe {
 
 /**
  * @class Gamepad
@@ -55,6 +55,24 @@ public:
      * @return false if the gamepad is not connected
      */
     bool isConnected(int index) const;
+
+    /**
+     * @brief Check if a button is supported by the gamepad
+     * 
+     * @param button Button to check
+     * @return true if the button is supported
+     * @return false if the button is not supported
+     */
+    bool isButtonSupported(SDL_GameControllerButton button) const;
+
+    /**
+     * @brief Check if an axis is supported by the gamepad
+     * 
+     * @param axis Axis to check
+     * @return true if the axis is supported
+     * @return false if the axis is not supported
+     */
+    bool isAxisSupported(SDL_GameControllerAxis axis) const;
 
     /**
      * @brief Get the state of a gamepad button
