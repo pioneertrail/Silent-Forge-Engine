@@ -1,0 +1,41 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Find the dependencies required by SilentForgeEngine
+find_dependency(OpenGL REQUIRED)
+
+# Optional dependencies based on how the library was compiled
+if(@USE_GLFW@)
+    # Find GLFW
+    find_dependency(glfw3 REQUIRED)
+endif()
+
+if(@USE_SDL2@)
+    # Find SDL2
+    find_dependency(SDL2 REQUIRED)
+endif()
+
+if(@USE_JSON@)
+    # Find JSON library
+    find_dependency(nlohmann_json REQUIRED)
+endif()
+
+# Include the targets file which contains the exported targets
+include("${CMAKE_CURRENT_LIST_DIR}/SilentForgeEngineTargets.cmake")
+
+# Define SilentForgeEngine::Engine target for convenience
+if(NOT TARGET SilentForgeEngine::Engine)
+    add_library(SilentForgeEngine::Engine INTERFACE IMPORTED)
+    set_target_properties(SilentForgeEngine::Engine PROPERTIES
+        INTERFACE_LINK_LIBRARIES "SilentForgeEngine"
+    )
+endif()
+
+# Check if dependencies were found
+if(NOT OpenGL_FOUND)
+    message(FATAL_ERROR "OpenGL not found, required by SilentForgeEngine")
+endif()
+
+# Add a message to confirm that the package was found correctly
+message(STATUS "Found SilentForgeEngine: ${CMAKE_CURRENT_LIST_DIR}") 

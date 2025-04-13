@@ -270,8 +270,48 @@ if(ENABLE_COVERAGE)
 endif()
 
 # Install targets
-install(TARGETS SilentForgeEngine
+install(TARGETS SilentForgeEngine core rendering input utils
+    EXPORT SilentForgeEngineTargets
     RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    INCLUDES DESTINATION include
+)
+
+# Install header files
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
+    DESTINATION include
+    FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
+)
+
+# Export targets
+install(EXPORT SilentForgeEngineTargets
+    FILE SilentForgeEngineTargets.cmake
+    NAMESPACE SilentForgeEngine::
+    DESTINATION lib/cmake/SilentForgeEngine
+)
+
+# Configure package file
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/SilentForgeEngineConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/SilentForgeEngineConfig.cmake
+    INSTALL_DESTINATION lib/cmake/SilentForgeEngine
+)
+
+# Write version file
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/SilentForgeEngineConfigVersion.cmake
+    VERSION 1.0.0
+    COMPATIBILITY SameMajorVersion
+)
+
+# Install package files
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/SilentForgeEngineConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/SilentForgeEngineConfigVersion.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindSilentForgeEngine.cmake
+    DESTINATION lib/cmake/SilentForgeEngine
 )
 
 # Special handling for skipped dependencies
