@@ -29,6 +29,17 @@ The Silent Forge Engine is designed with a modular, component-based architecture
 - **Transform System**: Spatial transformations and hierarchy
 - **Camera System**: View and projection management
 
+### 4. Input System
+- **Gamepad Support**: Platform-agnostic gamepad input handling
+- **Gamepad Configuration**: JSON-based binding system for gamepad controls
+  - Supports Windows XInput, Linux SDL2, and macOS MFi controllers
+  - Configurable button and axis mappings
+  - Cross-platform compatibility
+  - Integration with core input system
+  - Tested via `tests/core/config_test.cpp` (>80% coverage)
+  - Validates SDL2 button/axis enums
+  - Handles malformed JSON and file errors
+
 ## Design Patterns
 
 ### Component-Based Architecture

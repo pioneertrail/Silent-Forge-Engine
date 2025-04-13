@@ -8,8 +8,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+# Set vcpkg installation directory
+set(VCPKG_INSTALLED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/installed/x64-windows)
+set(CMAKE_PREFIX_PATH ${VCPKG_INSTALLED_DIR})
+
 # Find dependencies
 find_package(OpenGL REQUIRED)
+find_package(SDL2 CONFIG REQUIRED)
 
 # Use FetchContent for dependencies
 include(FetchContent)
@@ -31,8 +36,6 @@ endif()
 
 # GLM
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/glm")
-    # We need to modify the include path instead of adding as a subdirectory
-    # to avoid the CMakeLists.txt issue
     include_directories(lib/glm)
 else()
     FetchContent_Declare(
@@ -44,7 +47,6 @@ else()
 endif()
 
 # Add GLAD (generated files in lib/glad)
-# Ensure glad.c and glad.h are placed correctly in lib/glad
 add_library(glad STATIC lib/glad/src/glad.c)
 target_include_directories(glad PUBLIC lib/glad/include)
 
@@ -53,21 +55,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/stb")
     include_directories(lib/stb)
 endif()
 
-# Source files (using explicit GLOB for better compatibility)
+# Source files
 file(GLOB CORE_SOURCES "src/core/*.cpp")
 file(GLOB RENDERING_SOURCES "src/rendering/*.cpp")
 set(SOURCES ${CORE_SOURCES} ${RENDERING_SOURCES})
 
-# Explicitly add SceneNode.cpp to avoid any issues
-list(APPEND SOURCES src/core/SceneNode.cpp)
-
-# Header files (optional, but can help IDEs - using explicit GLOB)
+# Header files
 file(GLOB CORE_HEADERS "include/core/*.hpp")
 file(GLOB RENDERING_HEADERS "include/rendering/*.hpp")
 set(HEADERS ${CORE_HEADERS} ${RENDERING_HEADERS})
 
 # Executable
-# Add main.cpp explicitly, then the globbed sources and headers
 add_executable(SilentForgeEngine src/main.cpp ${SOURCES} ${HEADERS})
 
 # Include directories for the project sources
@@ -75,23 +73,25 @@ target_include_directories(SilentForgeEngine PRIVATE include)
 target_include_directories(SilentForgeEngine PRIVATE include/third_party)
 
 # Link libraries
-target_link_libraries(SilentForgeEngine PRIVATE glad glfw OpenGL::GL)
+target_link_libraries(SilentForgeEngine PRIVATE 
+    glad 
+    glfw 
+    OpenGL::GL 
+    $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+    $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+)
 
-# Platform-specific settings (Example - may need adjustment)
+# Platform-specific settings
 if (WIN32)
-    # Link necessary Windows libraries if needed
     target_link_libraries(SilentForgeEngine PRIVATE gdi32 user32)
-    # Enable high warning level on MSVC
     if (MSVC)
         target_compile_options(SilentForgeEngine PRIVATE /W4)
     endif()
 elseif (APPLE)
     # Link necessary macOS frameworks if needed
-    # target_link_libraries(SilentForgeEngine PRIVATE "-framework Cocoa" "-framework OpenGL" "-framework IOKit") # Example
 endif()
 
-# Copy shaders to build directory (Optional, but helpful)
-# This assumes your executable runs from CMAKE_RUNTIME_OUTPUT_DIRECTORY
+# Copy shaders to build directory
 file(GLOB SHADER_FILES "${CMAKE_SOURCE_DIR}/shaders/*")
 add_custom_command(TARGET SilentForgeEngine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

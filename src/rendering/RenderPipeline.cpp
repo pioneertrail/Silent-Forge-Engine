@@ -1,4 +1,5 @@
 #include "rendering/RenderPipeline.hpp"
+#include "rendering/Material.hpp"
 #include <algorithm>
 
 namespace SFE {
@@ -67,10 +68,10 @@ void RenderPipeline::sortRenderables() {
 
     // Group renderables by shader
     for (const auto& renderable : renderables) {
-        auto material = renderable->getMaterial();
-        if (material) {
-            auto shader = material->getShader();
-            renderBatches[shader].push_back(renderable);
+        if (auto material = renderable->getMaterial()) {
+            if (auto shader = material->getShader()) {
+                renderBatches[shader].push_back(renderable);
+            }
         }
     }
 }
@@ -92,6 +93,9 @@ void RenderPipeline::renderBatch(const std::vector<std::shared_ptr<Renderable>>&
 
     // Render each object in the batch
     for (const auto& renderable : batch) {
+        if (auto renderableMaterial = renderable->getMaterial()) {
+            renderableMaterial->bind();
+        }
         renderable->prepare();
         renderable->bind();
         renderable->draw();

@@ -1,4 +1,6 @@
 // src/main.cpp
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include "core/WindowManager.hpp"
 #include "core/Camera.hpp"
 #include "core/InputManager.hpp"

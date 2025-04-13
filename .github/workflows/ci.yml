@@ -1,37 +1,62 @@
-name: Multi-Agent CI
+name: CI
 
 on:
-  pull_request:
-    branches: [ main, develop ]
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        build_type: [Debug, Release]
-
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
+      - uses: actions/checkout@v3
+      
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format clang-tidy cmake ninja-build lcov
 
-    - name: Set up CMake
-      uses: actions/setup-cmake@v3
+      - name: Configure
+        run: cmake --preset=dev
 
-    - name: Configure CMake
-      run: |
-        cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTS=ON
+      - name: Build
+        run: cmake --build --preset=dev
 
-    - name: Build
-      run: cmake --build build --config ${{ matrix.build_type }}
+      - name: Test
+        run: ctest --preset=dev
 
-    - name: Run Tests
-      run: |
-        cd build
-        ctest --output-on-failure
+      - name: Generate Coverage
+        run: |
+          cmake --build --preset=dev --target coverage
+          lcov --capture --directory . --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' --output-file coverage.info
+          genhtml coverage.info --output-directory coverage
+
+      - name: Upload Coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage/
+
+      - name: Format Check
+        run: |
+          find src -name "*.cpp" -o -name "*.h" | xargs clang-format --dry-run --Werror
+
+      - name: Static Analysis
+        run: |
+          find src -name "*.cpp" -o -name "*.h" | xargs clang-tidy -- -Iinclude
+
+      - name: Performance Check
+        run: |
+          ./bin/performance_tests --max-frame-time 1ms
+
+      - name: Notify Agent
+        if: failure()
+        run: |
+          echo "Check failed for ${{ github.head_ref }}"
+          echo "Agent: ${{ github.head_ref }}"
+          echo "Please review the logs and fix the issues."
 
   format:
     runs-on: ubuntu-latest
@@ -64,7 +89,7 @@ jobs:
         grep -q "## \[Unreleased\]" CHANGELOG.md
 
   agent-specific:
-    needs: [build, format, lint, docs]
+    needs: [build-and-test, format, lint, docs]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
