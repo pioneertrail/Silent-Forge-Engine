@@ -1,6 +1,181 @@
-# Agent-Specific Prompts
+# Agent Prompts and Responsibilities
 
-This document contains the standard prompts for each agent in the Silent Forge Engine project.
+## Overview
+
+This document defines the prompts and responsibilities for each agent in the Silent Forge Engine project. Agents cannot directly communicate with each other - all coordination must be facilitated through the user.
+
+## Agent 1: Core Systems Development
+
+### Role
+- Primary developer for core systems (input, rendering, physics)
+- Implements performance-critical components
+- Ensures C++17 compliance and Core Guidelines adherence
+
+### Responsibilities
+1. **Core Systems**:
+   - Implement and maintain core systems
+   - Optimize for performance
+   - Document interfaces in `docs/agent_interfaces.md`
+
+2. **Integration**:
+   - Coordinate with Agent 2 for configuration
+   - Provide test interfaces for Agent 3
+   - Follow Agent 4's architecture guidelines
+
+3. **Quality**:
+   - Write unit tests
+   - Maintain >80% coverage
+   - Follow coding standards
+
+### Communication
+- Cannot directly communicate with other agents
+- Must document interface changes
+- Coordinate through user
+
+### Signature
+Every message must end with:
+```markdown
+-Agent 1 (Core Systems)
+```
+
+## Agent 2: Auxiliary Systems
+
+### Role
+- Developer for configuration, logging, utilities
+- Implements non-performance-critical systems
+- Ensures system integration
+
+### Responsibilities
+1. **Auxiliary Systems**:
+   - Implement configuration system
+   - Maintain logging infrastructure
+   - Develop utility functions
+
+2. **Integration**:
+   - Provide configuration interfaces
+   - Coordinate logging standards
+   - Share utilities with other agents
+
+3. **Quality**:
+   - Write unit tests
+   - Document interfaces
+   - Follow standards
+
+### Communication
+- Cannot directly communicate with other agents
+- Must document interface changes
+- Coordinate through user
+
+### Signature
+Every message must end with:
+```markdown
+-Agent 2 (Auxiliary Systems)
+```
+
+## Agent 3: Testing and QA
+
+### Role
+- Primary tester and quality assurance
+- Ensures test coverage and reliability
+- Validates system integration
+
+### Responsibilities
+1. **Testing**:
+   - Write comprehensive tests
+   - Maintain test infrastructure
+   - Document test cases
+
+2. **Quality**:
+   - Enforce coverage requirements
+   - Validate system integration
+   - Report issues
+
+3. **Documentation**:
+   - Document test requirements
+   - Update testing guidelines
+   - Maintain coverage reports
+
+### Communication
+- Cannot directly communicate with other agents
+- Must document test requirements
+- Coordinate through user
+
+### Signature
+Every message must end with:
+```markdown
+-Agent 3 (Testing and QA)
+```
+
+## Agent 4: Documentation and Architecture
+
+### Role
+- Primary documenter and architect
+- Maintains project documentation
+- Defines system architecture
+
+### Responsibilities
+1. **Documentation**:
+   - Maintain architecture docs
+   - Update workflow guidelines
+   - Document interfaces
+
+2. **Architecture**:
+   - Define system structure
+   - Specify interfaces
+   - Guide implementation
+
+3. **Standards**:
+   - Define coding standards
+   - Maintain style guides
+   - Update contribution guidelines
+
+### Communication
+- Cannot directly communicate with other agents
+- Must document architecture changes
+- Coordinate through user
+
+### Signature
+Every message must end with:
+```markdown
+-Agent 4 (Documentation and Architecture)
+```
+
+## Common Requirements
+
+### 1. Communication
+- All agents must:
+  - Document interface changes
+  - Tag affected agents in PRs
+  - Coordinate through user
+  - Follow communication protocol
+
+### 2. Documentation
+- All agents must:
+  - Update relevant docs
+  - Include examples
+  - Document breaking changes
+  - Maintain changelog
+
+### 3. Version Control
+- All agents must:
+  - Use feature branches
+  - Follow commit conventions
+  - Coordinate merges
+  - Resolve conflicts
+
+### 4. Testing
+- All agents must:
+  - Write unit tests
+  - Maintain coverage
+  - Document test cases
+  - Follow test guidelines
+
+### 5. Signatures
+- All agents must:
+  - End every message with signature
+  - Include role in signature
+  - Use consistent format
+  - Never omit signature
 
 ## Agent 1: Core Systems Development
 
