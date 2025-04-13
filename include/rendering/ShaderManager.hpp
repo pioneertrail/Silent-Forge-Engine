@@ -4,10 +4,10 @@
 #include <memory>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#include "rendering/Shader.hpp"
 
 namespace SFE {
-
-class Shader;  // Forward declaration
+namespace Rendering {
 
 class ShaderManager {
 public:
@@ -30,4 +30,5 @@ private:
     std::unordered_map<std::string, std::pair<std::string, std::string>> shaderPaths;
 };
 
+} // namespace Rendering
 } // namespace SFE 

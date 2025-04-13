@@ -8,6 +8,7 @@
 #include "stb/stb_image.h"
 
 namespace SFE {
+namespace Rendering {
 
 TextRenderer::TextRenderer() 
     : vao(0), vbo(0), textureID(0), atlasWidth(0), atlasHeight(0),
@@ -277,4 +278,5 @@ void TextRenderer::renderBatch(const glm::mat4& projection) {
     flushBatch(projection);
 }
 
-} 
+} // namespace Rendering
+} // namespace SFE 

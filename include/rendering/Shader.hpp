@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 
 namespace SFE {
+namespace Rendering {
+
 class Shader {
 public:
     Shader(const std::string& vertexPath, const std::string& fragmentPath);
@@ -41,4 +43,6 @@ private:
     void checkCompileErrors(GLuint shader, std::string type);
     void checkLinkErrors(GLuint program);
 };
+
+} // namespace Rendering
 } 

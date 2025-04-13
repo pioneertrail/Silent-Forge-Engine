@@ -1,7 +1,11 @@
 #pragma once
 
+#include "rendering/GLIncludes.hpp"
 #include <string>
-#include <GL/glew.h>
+#include "SFEGlobalIncludes.hpp"
+
+namespace SFE {
+namespace Rendering {
 
 class Texture {
 public:
@@ -9,16 +13,20 @@ public:
     ~Texture();
 
     bool loadFromFile(const std::string& filename);
-    void bind(GLenum textureUnit = GL_TEXTURE0) const;
-    void unbind() const;
-
-    GLuint getID() const { return m_textureID; }
-    int getWidth() const { return m_width; }
-    int getHeight() const { return m_height; }
+    bool bind(GLenum textureUnit = GL_TEXTURE0) const;
+    bool unbind() const;
+    int getWidth() const;
+    int getHeight() const;
+    int getChannels() const;
+    GLuint getTextureID() const;
+    
+    // Added method to set texture ID manually
+    void setId(GLuint id);
 
 private:
     GLuint m_textureID;
-    int m_width;
-    int m_height;
-    int m_channels;
-}; 
+    int m_width, m_height, m_channels;
+};
+
+} // namespace Rendering
+} // namespace SFE 

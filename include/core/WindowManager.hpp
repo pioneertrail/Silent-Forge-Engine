@@ -1,11 +1,14 @@
 #pragma once
-#include <glad/glad.h> // Include GLAD before GLFW
+#include "rendering/GLIncludes.hpp"
 #include <GLFW/glfw3.h>
 #include <string>
 
 namespace SFE {
 class WindowManager {
 public:
+    // Default constructor
+    WindowManager();
+    
     WindowManager(int width, int height, const std::string& title);
     ~WindowManager();
 
@@ -16,6 +19,7 @@ public:
     WindowManager& operator=(WindowManager&&) = delete;
 
     bool initialize();
+    bool initialize(int width, int height, const std::string& title);
     void shutdown();
     bool shouldClose() const;
     void swapBuffers();
@@ -28,8 +32,9 @@ public:
 private:
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 
-    GLFWwindow* window;
-    int width, height;
-    std::string title;
+    GLFWwindow* window{nullptr};
+    int width{800}, height{600};
+    std::string title{"Window"};
+    bool isInitialized{false};
 };
 } 

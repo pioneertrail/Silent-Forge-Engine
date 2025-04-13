@@ -11,8 +11,12 @@ void WindowManager::framebufferSizeCallback(GLFWwindow* /*window*/, int width, i
     glViewport(0, 0, width, height);
 }
 
+// Default constructor
+WindowManager::WindowManager()
+    : width(800), height(600), title("Window"), window(nullptr), isInitialized(false) {}
+
 WindowManager::WindowManager(int width, int height, const std::string& title)
-    : width(width), height(height), title(title), window(nullptr) {}
+    : width(width), height(height), title(title), window(nullptr), isInitialized(false) {}
 
 WindowManager::~WindowManager() {
     // Only destroy the window here, don't terminate GLFW
@@ -24,6 +28,10 @@ WindowManager::~WindowManager() {
 }
 
 bool WindowManager::initialize() {
+    if (isInitialized) {
+        return true;
+    }
+    
     // Initialize GLFW only if it hasn't been initialized yet.
     // This requires careful handling if multiple WindowManagers could exist.
     // For a single window, initializing once is fine.
@@ -63,7 +71,15 @@ bool WindowManager::initialize() {
 
     glViewport(0, 0, width, height);
     std::cout << "WindowManager initialized successfully." << std::endl;
+    isInitialized = true;
     return true;
+}
+
+bool WindowManager::initialize(int width, int height, const std::string& title) {
+    this->width = width;
+    this->height = height;
+    this->title = title;
+    return initialize();
 }
 
 // Remove the shutdown method or change its behavior
@@ -80,6 +96,7 @@ void WindowManager::shutdown() {
     if (window) {
         glfwDestroyWindow(window);
         window = nullptr;
+        isInitialized = false;
         std::cout << "GLFW window destroyed via shutdown()." << std::endl;
     }
     // DO NOT call glfwTerminate() here

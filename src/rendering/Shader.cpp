@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp> // For glm::value_ptr
 
 namespace SFE {
+namespace Rendering {
 
 Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) : programID(0) {
     // 1. Retrieve the vertex/fragment source code from filePath
@@ -145,4 +146,5 @@ void Shader::setMat4(const std::string& name, const glm::mat4& mat) const {
     glUniformMatrix4fv(glGetUniformLocation(programID, name.c_str()), 1, GL_FALSE, glm::value_ptr(mat));
 }
 
+} // namespace Rendering
 } 

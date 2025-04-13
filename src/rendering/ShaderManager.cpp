@@ -4,6 +4,7 @@
 #include <iostream>
 
 namespace SFE {
+namespace Rendering {
 
 ShaderManager& ShaderManager::getInstance() {
     static ShaderManager instance;
@@ -66,4 +67,5 @@ void ShaderManager::clear() {
     shaderPaths.clear();
 }
 
+} // namespace Rendering
 } // namespace SFE 

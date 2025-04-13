@@ -7,6 +7,7 @@
 #include "rendering/Shader.hpp"
 
 namespace SFE {
+namespace Rendering {
 
 class TextRenderer {
 public:
@@ -52,4 +53,5 @@ private:
     void addToBatch(const std::string& text, float x, float y, float scale, const glm::vec3& color);
 };
 
+} // namespace Rendering
 } 

@@ -3,7 +3,7 @@
 
 namespace SFE {
 
-SceneNode::SceneNode(Mesh* mesh) : mesh(mesh) {
+SceneNode::SceneNode(Rendering::Mesh* mesh) : mesh(mesh) {
     // Calculate orbit radius if this is not the center node
     if (position.x != 0.0f || position.y != 0.0f || position.z != 0.0f) {
         orbitRadius = glm::length(position);
@@ -27,7 +27,7 @@ void SceneNode::update(float deltaTime, float currentTime) {
     }
 }
 
-void SceneNode::draw(Shader& shader, const Camera& camera) const {
+void SceneNode::draw(Rendering::Shader& shader, const Camera& camera) const {
     if (!mesh) return;
     
     if (texture) {
