@@ -1,11 +1,75 @@
 # Build directories
 build/
-bin/
 out/
-dist/
+bin/
+lib/
+
+# IDE files
+.vscode/
+.idea/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Dependencies
+deps/
+vcpkg/
+vcpkg_installed/
+
+# Generated files
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.pdb
+*.ilk
+*.idb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# Coverage
+coverage/
+*.gcda
+*.gcno
+*.gcov
+*.info
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+*.cmake
+
+# OS specific
+.DS_Store
+Thumbs.db
 
 # CMake generated files
-CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
@@ -60,7 +124,6 @@ Makefile
 *.dll
 
 # OS generated files
-.DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
@@ -69,7 +132,6 @@ ehthumbs.db
 Thumbs.db
 
 # Logs and databases
-*.log
 *.sql
 *.sqlite
 *.db
@@ -87,25 +149,18 @@ jspm_packages/
 bower_components/
 
 # Debug files
-*.pdb
-*.idb
-*.ilk
 *.exp
 *.manifest
 *.res
 *.aps
 *.opt
-*.ncb
 *.plg
 *.clw
-*.aps
 *.ncb
 *.user
-*.aps
 *.pch
 *.vspscc
 *.vssscc
-.builds
 *.pidb
 *.svclog
 *.scc
