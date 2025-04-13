@@ -15,7 +15,11 @@ All notable changes to the Silent Forge Engine will be documented in this file.
 - Updated architecture documentation with gamepad configuration details
 
 ### Fixed
-- None
+- Removed `Gamepad` dependency in `config_test.cpp` empty JSON test (#126).
+- Full bindings test with unsupported button check in `config_test.cpp` using `MockGamepad`.
+- Test for loading bindings without `Gamepad` in `config_test.cpp`.
+- Large config test in `config_test.cpp` to stress test parsing.
+- Sudo/admin note in `TROUBLESHOOTING.md` permissions section.
 
 ### Removed
 - None

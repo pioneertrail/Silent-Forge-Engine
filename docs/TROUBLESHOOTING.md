@@ -94,4 +94,174 @@
   - Run CI checks locally before pushing (`cmake --build --preset=dev`, `ctest --preset=dev`).
   - Pin dependency versions in CI (e.g., `clang-format-15`, `cmake 3.22`).
   - Monitor CI runtime and optimize long-running tests.
-  - Include CI setup instructions in `docs/DEVELOPMENT_WORKFLOW.md`. 
+  - Include CI setup instructions in `docs/DEVELOPMENT_WORKFLOW.md`.
+
+## Gamepad Configuration Issues
+
+### Partial Configuration Loading
+- **Symptoms**: Some gamepad buttons/axes don't respond despite valid configuration.
+- **Cause**: The gamepad doesn't support all configured buttons/axes, leading to skipped bindings.
+- **Solution**:
+  1. Check logs for warnings like "Button not supported" or "Axis not supported".
+  2. Use `Gamepad::isButtonSupported` and `isAxisSupported` to list supported controls.
+  3. Update `gamepad.json` to include only supported buttons/axes.
+  4. If no bindings load, verify gamepad connection and driver compatibility.
+- **Prevention**:
+  - Generate configurations dynamically based on detected gamepad capabilities.
+  - Test configurations with the target gamepad model before deployment.
+  - Document expected bindings in user guides.
+
+### Unsupported Buttons/Axes
+- **Symptoms**: Buttons or axes are ignored in configuration.
+- **Cause**: Controls not supported by the connected gamepad.
+- **Solution**:
+  1. Check logs for "Button not supported" or "Axis not supported" warnings.
+  2. Verify gamepad capabilities with `Gamepad::isButtonSupported` and `isAxisSupported`.
+  3. Update configuration to use only supported controls.
+- **Prevention**:
+  - Test configuration with target gamepad before deployment.
+  - Document supported controls in gamepad documentation.
+
+### Invalid Axis Ranges
+- **Symptoms**: Configuration fails to load with "Invalid axis range" error.
+- **Cause**: `min` value exceeds `max` value in axis configuration.
+- **Solution**:
+  1. Check axis range definitions in `gamepad.json`.
+  2. Ensure `min` ≤ `max` for all axes.
+  3. Use default ranges (-1.0 to 1.0) if unsure.
+- **Prevention**:
+  - Validate axis ranges during configuration editing.
+  - Include range validation in configuration tools.
+
+### Permission Issues
+- **Symptoms**: Configuration fails to load with errors like "Failed to open gamepad config".
+- **Cause**: Insufficient file or directory permissions on the system.
+- **Solution**:
+  - **Linux**:
+    1. Check permissions with `ls -l gamepad.json`.
+    2. Set read permissions: `chmod 644 gamepad.json`.
+    3. Verify directory access: `chmod 755 /path/to/config/dir`.
+  - **macOS**:
+    1. Check permissions with `ls -l gamepad.json`.
+    2. Set read permissions: `chmod 644 gamepad.json`.
+    3. Ensure user has access to `~/Library/Application Support/SFE`.
+  - **Windows**:
+    1. Check file properties for read-only status.
+    2. Grant read access: `icacls gamepad.json /grant Users:R`.
+    3. Verify directory access in `%APPDATA%\SFE`.
+  - Ensure the user has sufficient privileges (e.g., not running as restricted user).
+  - **Note**: Some commands may require sudo (Linux/macOS) or admin privileges (Windows).
+- **Prevention**:
+  - Set correct permissions during installation (e.g., 644 for files, 755 for directories).
+  - Use platform-standard config paths (e.g., `~/.config/SFE` on Linux).
+  - Document permission requirements in setup guides.
+
+### MFi Compliance Warnings
+- **Symptoms**: "Config lacks MFi compliance flag" warning on macOS.
+- **Cause**: Missing MFi compliance flag in configuration.
+- **Solution**:
+  1. Add `"mfi_compliant": true` to configuration if using MFi controller.
+  2. Set `"mfi_compliant": false` for non-MFi controllers.
+  3. Update configuration to match controller type.
+- **Prevention**:
+  - Include MFi flag in configuration templates.
+  - Document MFi requirements for macOS deployment.
+
+### JSON Parsing Errors
+- **Symptoms**: "JSON parse error" when loading configuration.
+- **Cause**: Malformed JSON in configuration file.
+- **Solution**:
+  1. Validate JSON syntax using a JSON validator.
+  2. Check for missing commas, quotes, or brackets.
+  3. Ensure all values are properly formatted.
+- **Prevention**:
+  - Use JSON schema validation during editing.
+  - Include example configurations in documentation.
+
+## Gamepad Issues
+
+### Gamepad Not Detected
+- **Symptoms**: No gamepad detected when connected
+- **Possible Causes**:
+  - SDL2 game controller subsystem not initialized
+  - Gamepad not recognized by SDL2
+  - Driver issues
+- **Solutions**:
+  1. Check if SDL2 is properly initialized:
+     ```cpp
+     if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) < 0) {
+         LOG_ERROR("SDL init failed: " + std::string(SDL_GetError()));
+     }
+     ```
+  2. Verify gamepad is recognized:
+     ```cpp
+     for (int i = 0; i < SDL_NumJoysticks(); ++i) {
+         if (SDL_IsGameController(i)) {
+             LOG_INFO("Gamepad found at index " + std::to_string(i));
+         }
+     }
+     ```
+  3. Check device drivers and USB connection
+
+### Button Mapping Issues
+- **Symptoms**: Buttons not responding or mapped incorrectly
+- **Possible Causes**:
+  - Invalid button configuration
+  - Unsupported buttons
+  - Configuration file errors
+- **Solutions**:
+  1. Verify button configuration in JSON:
+     ```json
+     {
+       "buttons": {
+         "0": "jump",
+         "1": "attack"
+       }
+     }
+     ```
+  2. Check button support:
+     ```cpp
+     if (!gamepad->isButtonSupported(button)) {
+         LOG_WARNING("Button not supported");
+     }
+     ```
+  3. Validate configuration file format
+
+### Axis Issues
+- **Symptoms**: Analog sticks not working or values incorrect
+- **Possible Causes**:
+  - Axis not calibrated
+  - Deadzone issues
+  - Configuration errors
+- **Solutions**:
+  1. Check axis values:
+     ```cpp
+     float value = gamepad->getAxisValue(axis);
+     LOG_INFO("Axis value: " + std::to_string(value));
+     ```
+  2. Verify axis configuration:
+     ```json
+     {
+       "axes": {
+         "0": {"min": -1.0, "max": 1.0}
+       }
+     }
+     ```
+  3. Calibrate gamepad if needed
+
+### Platform-Specific Issues
+
+#### Windows
+- Ensure XInput drivers are installed
+- Check USB connection and power management settings
+- Verify gamepad is recognized in Device Manager
+
+#### Linux
+- Check udev rules for gamepad access
+- Verify evdev support
+- Check permissions for /dev/input devices
+
+#### macOS
+- Verify MFi compliance for iOS controllers
+- Check USB connection for wired controllers
+- Verify Bluetooth pairing for wireless controllers 
