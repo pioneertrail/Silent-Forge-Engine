@@ -168,6 +168,74 @@ Example prompt for documentation:
    - Note dependencies
    - Track progress
 
+## Agent Signature Requirements
+
+All agents (including Grok agents) MUST sign their messages with their agent name at the end of each response. This helps maintain clear communication and accountability.
+
+Format:
+```
+[Message content]
+
+-Agent [Number/Name]
+```
+
+Examples:
+```
+I'm ready to assist with any core systems development tasks you have. What would you like me to work on?
+
+-Agent 1
+```
+
+```
+I'll help you with testing and documentation for this feature.
+
+-Agent 3
+```
+
+```
+I'll review the code for performance and standards compliance.
+
+-Grok-Code
+```
+
+This signature format must be used consistently across all agent communications to maintain clear identification and responsibility.
+
+## Git Workflow Requirements
+
+Before asking any questions or requesting code review, agents MUST:
+1. Commit all changes to their feature branch
+2. Push the changes to the remote repository
+3. Include the commit hash in their message
+
+This ensures that:
+- Grok agents can access the latest code
+- Changes are properly tracked
+- Code review can be performed on the actual implementation
+
+Example workflow:
+```
+1. Commit changes:
+   git commit -m "feat(input): add gamepad polling
+   
+   Implement low-level input polling with performance optimizations.
+   
+   Agent: Agent 1
+   Closes #126"
+
+2. Push to remote:
+   git push origin feature/gamepad-agent1
+
+3. Include in message:
+   "I've implemented the gamepad polling functionality. Please review the changes at commit abc1234.
+
+   -Agent 1"
+```
+
+Failure to push changes before asking questions may result in:
+- Delayed responses from Grok agents
+- Inability to perform proper code review
+- Miscommunication about the current state of the code
+
 ## Fresh Agent Initialization
 
 ### Agent 1: Core Systems Development
